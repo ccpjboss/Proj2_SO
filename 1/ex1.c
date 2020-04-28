@@ -17,6 +17,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include <signal.h>
 
 #define M 40 /*number of initial numbers to send to msq1 */
 #define N 4  /*number of consumers */
@@ -28,14 +29,24 @@ struct message
     int number;
 };
 
+int msq1, msq2;
+
 void producer(int msq1, int msq2);
 void consumer(int n, int msq1, int msq2);
+void sighandler(int signum);
 
 int main(int argc, char const *argv[])
 {
+
+    struct sigaction sig;
+    sig.sa_handler = sighandler; /* Handle function to run when a signal is received */
+
+    if (sigaction(SIGTERM, &sig, NULL) == -1) /* Associate SIGHUP with sigaction struct sig*/
+        perror("SIGACTION--SIGTERM");
+
     /* Creation of the message queues */
-    int msq1 = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
-    int msq2 = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
+    msq1 = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
+    msq2 = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
 
     /* Check for creation errors */
     if (msq1 == -1)
@@ -55,9 +66,7 @@ int main(int argc, char const *argv[])
     {
         /* CHILD */
         for (int i = 1; i <= N; i++)
-        {
             consumer(i, msq1, msq2);
-        }
 
         exit(0); /* Child exit success*/
     }
@@ -66,6 +75,7 @@ int main(int argc, char const *argv[])
         /* PARRENT */
         producer(msq1, msq2);
     }
+    /* code */
 
     wait(NULL);
 
@@ -73,7 +83,6 @@ int main(int argc, char const *argv[])
     if ((msgctl(msq1, IPC_RMID, NULL) == -1))
     {
         perror("msgctl 1");
-
         exit(1);
     }
 
@@ -81,7 +90,6 @@ int main(int argc, char const *argv[])
     if ((msgctl(msq2, IPC_RMID, NULL) == -1))
     {
         perror("msgctl 2");
-
         exit(1);
     }
 
@@ -112,8 +120,6 @@ void producer(int msq1, int msq2)
         }
     }
 
-    printf("MSQ2 setup!\n");
-
     int c = 0;    /* counts the number of consumers that have finished */
     while (c < N) /* While the number of consumers dead is less than 4 */
     {
@@ -134,10 +140,6 @@ void producer(int msq1, int msq2)
                 {
                     perror("msgsnd");
                     exit(1);
-                }
-                else
-                {
-                    printf("Producer generated a number: %d\n", msg.number);
                 }
             }
             else /* if mayproduce == 0 */
@@ -191,7 +193,6 @@ void consumer(int n, int msq1, int msq2)
             /* Checks for repeated value */
             for (int j = 0; j < 6; j++)
             {
-                printf("%d) key[j]=%d and number=%d\n",n,key[j],msg.number);
                 if (key[j] == msg.number)
                 {
                     repeat = true;
@@ -201,7 +202,7 @@ void consumer(int n, int msq1, int msq2)
             if (repeat == true)
             {
                 i = i - 1;
-                repeat=false;
+                repeat = false;
             }
             else
             {
@@ -241,4 +242,24 @@ void consumer(int n, int msq1, int msq2)
     printf("\n");
 
     fclose(fp);
+}
+void sighandler(int signum)
+{
+    if (signum == SIGTERM)
+    {
+        printf("SIGTERM received realeasing memory\n");
+
+        if ((msgctl(msq1, IPC_RMID, NULL) == -1))
+        {
+            perror("msgctl 1");
+            exit(1);
+        }
+
+        /* destroy message queue */
+        if ((msgctl(msq2, IPC_RMID, NULL) == -1))
+        {
+            perror("msgctl 2");
+            exit(1);
+        }
+    }
 }
