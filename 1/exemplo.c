@@ -1,4 +1,4 @@
-#include <stdlib.h>                                                                                          
+#include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/msg.h>
@@ -6,7 +6,8 @@
 #include <string.h>
 
 /* message structure */
-struct message {
+struct message
+{
     long mtype;
     int number;
 };
@@ -15,15 +16,17 @@ int main(void)
 {
     /* create message queue */
     int msqid = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
-    if (msqid == -1) {
-        perror("msgget");
 
+    if (msqid == -1)
+    {
+        perror("msgget");
         return EXIT_FAILURE;
     }
 
     /* fork a child process */
     pid_t pid = fork();
-    if (pid == 0) {
+    if (pid == 0)
+    {
         /* child */
         int n = 5;
         struct message message;
@@ -31,12 +34,14 @@ int main(void)
         message.number = 5;
 
         /* send message to queue */
-        if (msgsnd(msqid, &message, sizeof(long) + sizeof(n), 0) == -1) {
+        if (msgsnd(msqid, &message, sizeof(long) + sizeof(n), 0) == -1)
+        {
             perror("msgsnd");
-
             return EXIT_FAILURE;
         }
-    } else {
+    }
+    else
+    {
         /* parent */
 
         /* wait for child to finish */
@@ -44,18 +49,19 @@ int main(void)
 
         /* receive message from queue */
         struct message message;
-        if (msgrcv(msqid, &message, sizeof(long) + sizeof(int), 0, 0) == -1) {
-            perror("msgrcv");
 
+        if (msgrcv(msqid, &message, sizeof(long) + sizeof(int), 0, 0) == -1)
+        {
+            perror("msgrcv");
             return EXIT_FAILURE;
         }
 
         printf("%d\n", message.number);
 
         /* destroy message queue */
-        if (msgctl(msqid, IPC_RMID, NULL) == -1) {
+        if (msgctl(msqid, IPC_RMID, NULL) == -1)
+        {
             perror("msgctl");
-
             return EXIT_FAILURE;
         }
     }
