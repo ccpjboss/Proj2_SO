@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-//Isto test
+//Conflict
 void *server(void *arg);
 
 int main(int argc, char const *argv[])
