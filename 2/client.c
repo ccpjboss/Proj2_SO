@@ -1,3 +1,4 @@
+//ALWAYS RUN THE CLIENT FIRST
 #include <sys/mman.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,25 +16,24 @@
 
 int main(int argc, char const *argv[])
 {
-    /* SHARED MEMORY */
-    int shrmem_fd;
-    double *shrmem;
+    int shrmem_fd;          //File descriptor for the shared memory
+    double *shrmem;         //Pointer to the shared memory segment
+    double value_read;      //Value read from input.asc
+    double final = DBL_MIN; //Last value to send
 
-    /* SEMAPHORES */
+    /* Creates the semaphores */
     sem_t *sem_id_read = sem_open(SEM_NAME, O_CREAT, 0666, 0);
     sem_t *sem_id_write = sem_open(SEM_NAME2, O_CREAT, 0666, 1);
 
+    /* Checks for error */
     if (sem_id_read == SEM_FAILED || sem_id_write == SEM_FAILED)
     {
         perror("sem_open");
         exit(1);
     }
-    /* Files */
-    char *file_name = "input.asc";
-    double value_read;
-    double final = DBL_MIN;
 
-    FILE *file = fopen(file_name, "r");
+    /* Opens the input.asc for reading */
+    FILE *file = fopen("input.asc", "r");
     if (file == NULL)
     {
         perror("fopen");
@@ -57,16 +57,20 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
+    /* Reads the input.asc until EOF is hit */
     fscanf(file, "%lf", &value_read);
     while (!feof(file))
     {
-        printf("%lf\n", value_read);
-        sem_wait(sem_id_write);
-        memcpy(shrmem, &value_read, sizeof(double));
-        sem_post(sem_id_read);
+        printf("%lf\n", value_read); /* DEBUG */
+
+        sem_wait(sem_id_write);                      //Locks the semaphore for writing
+        memcpy(shrmem, &value_read, sizeof(double)); //Copies the value read from the file to the shared memory
+        sem_post(sem_id_read);                       //Unlocks/Signals the semaphores for reading
+
         fscanf(file, "%lf", &value_read);
     }
 
+    // Sending the DBL_MIN value
     sem_wait(sem_id_write);
     memcpy(shrmem, &final, sizeof(final));
     sem_post(sem_id_read);
@@ -74,6 +78,7 @@ int main(int argc, char const *argv[])
     shm_unlink(SHRMEM);
     sem_unlink(SEM_NAME);
     sem_unlink(SEM_NAME2);
+
     fclose(file);
 
     return 0;
