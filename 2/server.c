@@ -6,10 +6,13 @@
 #include <string.h>
 #include <float.h>     //DBL_MIN
 #include <semaphore.h> //Library for the semaphores
+#include <signal.h>
 
 #define SHRMEM "/mem_example"  //Path to named shared memory
 #define SEM_NAME "/sem_read"   //Path to the semaphore read
 #define SEM_NAME2 "/sem_write" //Path to the semaphore write
+
+void sighandler(int signum);
 
 int main(int argc, char const *argv[])
 {
@@ -18,6 +21,12 @@ int main(int argc, char const *argv[])
     double value_read = 0;  //Variable to store the double read from the shared memory
     int c = 0;              //Counter to count the number of doubles read from the shared memory
     char double_to_str[50]; //This variable is used to convert double to ASCII to store in output.asc
+
+    struct sigaction sig;
+    sig.sa_handler = sighandler; /* Handle function to run when a signal is received */
+
+    if (sigaction(SIGTERM, &sig, NULL) == -1) /* Associate SIGHUP with sigaction struct sig*/
+        perror("SIGACTION--SIGTERM");
 
     /* Creates the two semaphores */
     sem_t *sem_id_read = sem_open(SEM_NAME, O_CREAT, 0666, 0);
@@ -97,6 +106,7 @@ int main(int argc, char const *argv[])
     for (int i = 0; i < c; i++)
     {
         array[i] = array[i] * 4.0;                       //Multiply the values by 4.0
+        printf("%lf\n",array[i]);
         snprintf(double_to_str, 50, "%lf \n", array[i]); //Convert the double values to ascii
         fprintf(file3, "%s", double_to_str);             //And stores it in the output.asc
     }
@@ -104,4 +114,15 @@ int main(int argc, char const *argv[])
     fclose(file3);
 
     return 0;
+}
+
+void sighandler(int signum)
+{
+    if (signum == SIGTERM)
+    {
+        printf("SIGTERM received realeasing memory\n");
+        shm_unlink(SHRMEM);   //Unlinks the shared memory object
+        sem_unlink(SEM_NAME); //Unlinks the semaphore
+        sem_unlink(SEM_NAME2);
+    }
 }

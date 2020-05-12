@@ -9,10 +9,13 @@
 #include <string.h>
 #include <float.h>
 #include <semaphore.h>
+#include <signal.h>
 
 #define SHRMEM "/mem_example"
 #define SEM_NAME "/sem_read"
 #define SEM_NAME2 "/sem_write"
+
+void sighandler(int signum);
 
 int main(int argc, char const *argv[])
 {
@@ -21,6 +24,11 @@ int main(int argc, char const *argv[])
     double value_read;      //Value read from input.asc
     double final = DBL_MIN; //Last value to send
 
+    struct sigaction sig;
+    sig.sa_handler = sighandler; /* Handle function to run when a signal is received */
+
+    if (sigaction(SIGTERM, &sig, NULL) == -1) /* Associate SIGHUP with sigaction struct sig*/
+        perror("SIGACTION--SIGTERM");
     /* Creates the semaphores */
     sem_t *sem_id_read = sem_open(SEM_NAME, O_CREAT, 0666, 0);
     sem_t *sem_id_write = sem_open(SEM_NAME2, O_CREAT, 0666, 1);
@@ -82,4 +90,15 @@ int main(int argc, char const *argv[])
     fclose(file);
 
     return 0;
+}
+
+void sighandler(int signum)
+{
+    if (signum == SIGTERM)
+    {
+        printf("SIGTERM received realeasing memory\n");
+        shm_unlink(SHRMEM);   //Unlinks the shared memory object
+        sem_unlink(SEM_NAME); //Unlinks the semaphore
+        sem_unlink(SEM_NAME2);
+    }
 }
