@@ -1,14 +1,3 @@
-/**
- * TODO: Create the message queues msq1 and msq2
- * TODO: Implement the code for the producer and the consumer
- *       * PRODUCER:
- *                  * genarate numbers between 1 and 49
- *                  * send values to msq1
- *       * CONSUMER: 
- *                  * Wait for message
- *                  * Process information, verify if it is repeated, if not save to file
- */
-
 #include <stdlib.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -243,6 +232,7 @@ void consumer(int n, int msq1, int msq2)
 
     fclose(fp);
 }
+
 void sighandler(int signum)
 {
     if (signum == SIGTERM)
