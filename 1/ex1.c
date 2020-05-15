@@ -15,14 +15,14 @@
 struct message
 {
     long mtype;
-    int number;
+    int number; //key
 };
 
-int msq1, msq2;
+int msq1, msq2; //message queues id
 
-void producer(int msq1, int msq2);
-void consumer(int n, int msq1, int msq2);
-void sighandler(int signum);
+void producer(int msq1, int msq2);        //Producer funtion
+void consumer(int n, int msq1, int msq2); //Consumer funtion
+void sighandler(int signum);              //Signal handler
 
 int main(int argc, char const *argv[])
 {
@@ -37,36 +37,34 @@ int main(int argc, char const *argv[])
     msq1 = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
     msq2 = msgget(IPC_PRIVATE, IPC_CREAT | 0600);
 
-    /* Check for creation errors */
+    /* Check for creation errors on msq1 creation*/
     if (msq1 == -1)
     {
         perror("Message queues creation error");
         exit(1);
     }
 
-    /* Check for creation errors */
+    /* Check for creation errors for msq2 creation */
     if (msq2 == -1)
     {
         perror("Message queues creation error");
         exit(1);
     }
 
-    if (fork() == 0)
+    for (int i = 0; i < N; i++)
     {
-        /* CHILD */
-        for (int i = 1; i <= N; i++)
+        if (fork() == 0) //Fork the main process
+        {
+            /* CHILD */
             consumer(i, msq1, msq2);
-
-        exit(0); /* Child exit success*/
+            exit(0); /* Child exit success*/
+        }
     }
-    else
-    {
-        /* PARRENT */
-        producer(msq1, msq2);
-    }
-    /* code */
+    /* PARRENT */
+    producer(msq1, msq2);
 
-    wait(NULL);
+    for (int i = 0; i < N; i++)
+        wait(NULL);
 
     /* destroy message queue */
     if ((msgctl(msq1, IPC_RMID, NULL) == -1))
