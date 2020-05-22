@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-//Conflict
 void *server(void *arg);
 
 int main(int argc, char const *argv[])
